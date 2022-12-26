@@ -3,38 +3,39 @@ import random
 import torch
 import numpy as np
 import soundfile as sf
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 
 class SoundTrainValidDataset(Dataset):
-    def __init__(self, data_dir, type, segement_length=16000*2):
+    def __init__(self, data_dir, type, segement_length=16000*2, valid_ratio=0.08):
         self.data_dir = data_dir
         self.segement_length = segement_length
         self.dicktkey = dict()
+        idx = 0
         for _, _, filelist in os.walk(data_dir):
             for filename in filelist:
-                spk, index = filename.split('_')
-                spk, index = int(spk[3:]), int(index.split('.')[0])
-                self.dicktkey[index] = spk
+                self.dicktkey[idx] = filename
+                idx += 1
         train_list, valid_list, _, _ = train_test_split(
-            list(self.dicktkey.values()), 
             list(self.dicktkey.keys()), 
-            test_size=0.1)
+            list(self.dicktkey.values()),
+            test_size=valid_ratio)
         if type == "train":
             self.data_list = train_list
         else:
             self.data_list = valid_list
+        print("Successfully load {} data, {} mode".format(len(self.data_list), type))
     
     def __len__(self):
         return len(self.data_list)
 
     def __getitem__(self, index):
         index = self.data_list[index]
-        label = self.dicktkey[index]
+        label = int(self.dicktkey[index].split('_')[0][3:])
         filename = os.path.join(
             self.data_dir, 
             "spk{:03}".format(label), 
-            "spk{0:03}_{1:03}.flac".format(label, index))
+            self.dicktkey[index])
         data, _ = sf.read(filename)
         if len(data) < self.segement_length:
             data = np.pad(data, (0, self.segement_length - len(data)), 'constant')  
@@ -61,3 +62,10 @@ class SoundTestDataset(Dataset):
         index = self.data_list[index]
         filename = os.path.join(self.data_dir, "{0:03}.flac".format(index))
         data, _ = sf.read(filename)
+
+if __name__ == "__main__":
+    train_data = SoundTrainValidDataset("./LibriSpeech-SI/train", "train")
+    train_loader = DataLoader(dataset=train_data, batch_size=64, shuffle=True, num_workers=10)
+    valid_data = SoundTrainValidDataset("./LibriSpeech-SI/train", "valid")
+    valid_loader = DataLoader(dataset=valid_data, batch_size=64, shuffle=False, num_workers=10)
+    print(list(train_loader)[0][0].shape)

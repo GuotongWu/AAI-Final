@@ -11,7 +11,7 @@ This model is modified and combined based on the following three projects:
 import math, torch, torchaudio
 import torch.nn as nn
 import torch.nn.functional as F
-
+from dataset import SoundTrainValidDataset
 
 class SEModule(nn.Module):
     def __init__(self, channels, bottleneck=128):
@@ -90,11 +90,11 @@ class PreEmphasis(torch.nn.Module):
         )
 
     def forward(self, input: torch.tensor) -> torch.tensor:
-        # input = input.unsqueeze(1)
-        # input = F.pad(input, (1, 0), 'reflect')
-        # return (input, self.flipped_filter).squeeze(1)
         input = input.unsqueeze(1)
-        return torch.cat((input[0].unsqueeze(1), input[1:]-self.coef*input[:-1])).squeeze(1)
+        input = F.pad(input, (1, 0), 'reflect')
+        return F.conv1d(input, self.flipped_filter).squeeze(1)
+        # input = input.unsqueeze(1)
+        # return torch.cat((input[0].unsqueeze(1), input[1:]-self.coef*input[:-1])).squeeze(1)
 
 class FbankAug(nn.Module):
 
@@ -204,5 +204,6 @@ class ECAPA_TDNN(nn.Module):
 
 if __name__ == "__main__":
     model = ECAPA_TDNN(C=512)
-    input = torch.rand(32,16000*2)
-    print(model(input, aug=True).shape)
+    train_data = SoundTrainValidDataset("./LibriSpeech-SI/train", "train")
+    train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=64, shuffle=True, num_workers=10)
+    print(model(train_loader.__iter__().next()[0], False))

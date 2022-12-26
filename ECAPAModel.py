@@ -23,13 +23,12 @@ class ECAPAModel(nn.Module):
 	def train_network(self, epoch, loader):
 		self.train()
 		## Update the learning rate based on the current epcoh
-		self.scheduler.step(epoch - 1)
 		index, top1, loss = 0, 0, 0
 		lr = self.optim.param_groups[0]['lr']
 		for num, (data, labels) in enumerate(loader, start = 1):
 			self.zero_grad()
 			labels            = labels.cuda()
-			speaker_embedding = self.speaker_encoder.forward(data.cuda(), aug = True)
+			speaker_embedding = self.speaker_encoder.forward(data.cuda(), aug = False)
 			nloss, prec       = self.speaker_loss.forward(speaker_embedding, labels)			
 			nloss.backward()
 			self.optim.step()
@@ -41,6 +40,7 @@ class ECAPAModel(nn.Module):
 			" Loss: %.5f, ACC: %2.2f%% \r"        %(loss/(num), top1/index*len(labels)))
 			sys.stderr.flush()
 		sys.stdout.write("\n")
+		# self.scheduler.step()
 		return loss/num, lr, top1/index*len(labels)
 
 	def eval_network(self, eval_list, eval_path):

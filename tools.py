@@ -100,3 +100,8 @@ def accuracy(output, target, topk=(1,)):
 		res.append(correct_k.mul_(100.0 / batch_size))
 	
 	return res
+
+if __name__ == "__main__":
+    a = torch.tensor([[0.3,0.7],[0.3,0.7],[0.6,0.4]])
+    b = torch.tensor([1,1,1])
+    print(accuracy(a, b))
