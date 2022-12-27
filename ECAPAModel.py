@@ -28,8 +28,9 @@ class ECAPAModel(nn.Module):
 		for num, (data, labels) in enumerate(loader, start = 1):
 			self.zero_grad()
 			labels            = labels.cuda()
-			speaker_embedding = self.speaker_encoder.forward(data.cuda(), aug = False)
-			nloss, prec       = self.speaker_loss.forward(speaker_embedding, labels)			
+			speaker_embedding = self.speaker_encoder.forward(data.cuda())
+			output       = self.speaker_loss.forward(speaker_embedding, labels)
+			nloss, prec  = self.speaker_loss.evaluation(output, labels)
 			nloss.backward()
 			self.optim.step()
 			index += len(labels)
@@ -50,8 +51,9 @@ class ECAPAModel(nn.Module):
 			index, top1, loss = 0, 0, 0
 			for num, (data, labels) in enumerate(loader, start = 1):
 				labels            = labels.cuda()
-				speaker_embedding = self.speaker_encoder.forward(data.cuda(), aug = False)
-				nloss, prec       = self.speaker_loss.forward(speaker_embedding, labels)
+				speaker_embedding = self.speaker_encoder.forward(data.cuda())
+				output       = self.speaker_loss.forward(speaker_embedding, labels)
+				nloss, prec  = self.speaker_loss.evaluation(output, labels)
 				index += len(labels)
 				top1 += prec
 				loss += nloss.detach().cpu().numpy()

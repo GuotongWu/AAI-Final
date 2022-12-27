@@ -144,7 +144,7 @@ class ECAPA_TDNN(nn.Module):
                                                  f_min = 20, f_max = 7600, window_fn=torch.hamming_window, n_mels=80),
             )
 
-        self.specaug = FbankAug() # Spec augmentation
+        # self.specaug = FbankAug() # Spec augmentation
 
         self.conv1  = nn.Conv1d(80, C, kernel_size=5, stride=1, padding=2)
         self.relu   = nn.ReLU()
@@ -167,13 +167,13 @@ class ECAPA_TDNN(nn.Module):
         self.bn6 = nn.BatchNorm1d(192)
 
 
-    def forward(self, x, aug):
+    def forward(self, x):
         with torch.no_grad():
             x = self.torchfbank(x)+1e-6
             x = x.log()   
             x = x - torch.mean(x, dim=-1, keepdim=True)
-            if aug == True:
-                x = self.specaug(x)
+            # if aug == True:
+            #     x = self.specaug(x)
 
         x = self.conv1(x)
         x = self.relu(x)

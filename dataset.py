@@ -7,10 +7,11 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 
 class SoundTrainValidDataset(Dataset):
-    def __init__(self, data_dir, type, segement_length=16000*2, valid_ratio=0.08):
+    def __init__(self, data_dir, type, aug=True, segement_length=16000*2, valid_ratio=0.08):
         self.data_dir = data_dir
         self.segement_length = segement_length
         self.dicktkey = dict()
+        self.aug = aug
         idx = 0
         for _, _, filelist in os.walk(data_dir):
             for filename in filelist:
@@ -42,26 +43,41 @@ class SoundTrainValidDataset(Dataset):
         else:
             start = random.randint(0, len(data)-self.segement_length)
             data = data[start:start+self.segement_length]
+        if self.aug:
+            data = self.add_noisy(data)
         return torch.tensor(data, dtype=torch.float32), torch.tensor(label, dtype=torch.int64)
 
+    def add_noisy(self, data):
+        filelist = os.listdir("./LibriSpeech-SI/noise")
+        filename = os.path.join("./LibriSpeech-SI/noise", random.sample(filelist, 1)[0])
+        noise, _ = sf.read(filename)
+        PS = np.sum(data**2)/len(data)
+        PN = np.sum(noise**2)/len(noise)
+        noise = noise * np.sqrt(PS/(31.6*PN))
+        if len(noise) < self.segement_length:
+            noise = np.pad(noise, (0, self.segement_length - len(noise)), 'constant')
+        else:
+            start = random.randint(0, len(noise)-self.segement_length)
+            noise = noise[start:start+self.segement_length]
+        return data + noise
+   
+# class SoundTestDataset(Dataset):
+#     def __init__(self, data_dir, segement_length=16000*2):
+#         self.data_dir = data_dir
+#         self.segement_length = segement_length
+#         self.data_list = list()
+#         for _, _, filelist in os.walk(data_dir):
+#             for filename in filelist:
+#                 index = int(filename.split('.')[0])
+#                 self.data_list.append(index)
     
-class SoundTestDataset(Dataset):
-    def __init__(self, data_dir, segement_length=16000*2):
-        self.data_dir = data_dir
-        self.segement_length = segement_length
-        self.data_list = list()
-        for _, _, filelist in os.walk(data_dir):
-            for filename in filelist:
-                index = int(filename.split('.')[0])
-                self.data_list.append(index)
-    
-    def __len__(self):
-        return len(self.data_list)
+#     def __len__(self):
+#         return len(self.data_list)
 
-    def __getitem__(self, index):
-        index = self.data_list[index]
-        filename = os.path.join(self.data_dir, "{0:03}.flac".format(index))
-        data, _ = sf.read(filename)
+#     def __getitem__(self, index):
+#         index = self.data_list[index]
+#         filename = os.path.join(self.data_dir, "{0:03}.flac".format(index))
+#         data, _ = sf.read(filename)
 
 if __name__ == "__main__":
     train_data = SoundTrainValidDataset("./LibriSpeech-SI/train", "train")

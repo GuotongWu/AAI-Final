@@ -31,10 +31,13 @@ class AAMsoftmax(nn.Module):
         one_hot.scatter_(1, label.view(-1, 1), 1)
         output = (one_hot * phi) + ((1.0 - one_hot) * cosine)
         output = output * self.s
+
+        return output
+
+    def evaluation(self, output, label):
         
         loss = self.ce(output, label)
         prec1 = accuracy(output.detach(), label.detach(), topk=(1,))[0]
-
         return loss, prec1
 
 if __name__ == "__main__":
