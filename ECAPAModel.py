@@ -2,6 +2,7 @@
 This part is used to train the speaker model and evaluate the performances
 '''
 
+import soundfile as sf
 import torch, sys, os, tqdm, numpy, soundfile, time, pickle
 import torch.nn as nn
 from tools import *
@@ -45,40 +46,20 @@ class ECAPAModel(nn.Module):
 		return loss/num, lr, top1/index*len(labels)
 
 
-	def eval_network(self, epoch, loader):
-		self.eval()
-		with torch.no_grad():
-			index, top1, loss = 0, 0, 0
-			for num, (data, labels) in enumerate(loader, start = 1):
-				labels            = labels.cuda()
-				speaker_embedding = self.speaker_encoder.forward(data.cuda())
-				output       = self.speaker_loss.forward(speaker_embedding, labels)
-				nloss, prec  = self.speaker_loss.evaluation(output, labels)
-				index += len(labels)
-				top1 += prec
-				loss += nloss.detach().cpu().numpy()
-				sys.stderr.write("Valid: " + time.strftime("%m-%d %H:%M:%S") + \
-				" [%2d] Testing: %.2f%%, "    %(epoch, 100 * (num / loader.__len__())) + \
-				" Loss: %.5f, ACC: %2.2f%% \r"        %(loss/(num), top1/index*len(labels)))
-				sys.stderr.flush()
-			sys.stdout.write("\n")
-
-		return loss/num, top1/index*len(labels)
-
-
-	def eval_network(self, eval_list, eval_path):
+	def eval_network(self, eval_path, valid_pair):
 		self.eval()
 		files = []
 		embeddings = {}
-		lines = open(eval_list).read().splitlines()
-		for line in lines:
-			files.append(line.split()[1])
-			files.append(line.split()[2])
+		for idx, pairs in enumerate(valid_pair):
+			for pair in pairs:
+				files.append([pair[0], pair[1]])
 		setfiles = list(set(files))
 		setfiles.sort()
 
 		for idx, file in tqdm.tqdm(enumerate(setfiles), total = len(setfiles)):
-			audio, _  = soundfile.read(os.path.join(eval_path, file))
+			label = int(file.split('_')[0][3:])
+			filename = os.path.join(eval_path, "spk{:03}".format(label), file)
+			audio, _  = sf.read(filename)
 			# Full utterance
 			data_1 = torch.FloatTensor(numpy.stack([audio],axis=0)).cuda()
 
@@ -102,16 +83,17 @@ class ECAPAModel(nn.Module):
 			embeddings[file] = [embedding_1, embedding_2]
 		scores, labels  = [], []
 
-		for line in lines:			
-			embedding_11, embedding_12 = embeddings[line.split()[1]]
-			embedding_21, embedding_22 = embeddings[line.split()[2]]
-			# Compute the scores
-			score_1 = torch.mean(torch.matmul(embedding_11, embedding_21.T)) # higher is positive
-			score_2 = torch.mean(torch.matmul(embedding_12, embedding_22.T))
-			score = (score_1 + score_2) / 2
-			score = score.detach().cpu().numpy()
-			scores.append(score)
-			labels.append(int(line.split()[0]))
+		for idx, pairs in enumerate(valid_pair):
+			for pair in pairs:		
+				embedding_11, embedding_12 = embeddings[pair[0]]
+				embedding_21, embedding_22 = embeddings[pair[1]]
+				# Compute the scores
+				score_1 = torch.mean(torch.matmul(embedding_11, embedding_21.T)) # higher is positive
+				score_2 = torch.mean(torch.matmul(embedding_12, embedding_22.T))
+				score = (score_1 + score_2) / 2
+				score = score.detach().cpu().numpy()
+				scores.append(score)
+				labels.append(int(pair[0].split('_')[0][3:]))
 			
 		# Coumpute EER and minDCF
 		EER = tuneThresholdfromScore(scores, labels, [1, 0.1])[1]
