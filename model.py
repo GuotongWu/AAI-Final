@@ -11,7 +11,6 @@ This model is modified and combined based on the following three projects:
 import math, torch, torchaudio
 import torch.nn as nn
 import torch.nn.functional as F
-from dataset import SoundTrainValidDataset
 
 class SEModule(nn.Module):
     def __init__(self, channels, bottleneck=128):
@@ -201,9 +200,3 @@ class ECAPA_TDNN(nn.Module):
         x = self.bn6(x)
 
         return x
-
-if __name__ == "__main__":
-    model = ECAPA_TDNN(C=512)
-    train_data = SoundTrainValidDataset("./LibriSpeech-SI/train", "train")
-    train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=64, shuffle=True, num_workers=10)
-    print(model(train_loader.__iter__().next()[0], False))

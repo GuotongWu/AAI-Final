@@ -7,16 +7,19 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 from itertools import  permutations
 
-def split_train_valid(data_dir, valid_avg=6):
+def split_train_valid(data_dir, valid_avg=5):
     train_list = []
     valid_list = []
     valid_pair = []
     for _, _, filelist in os.walk(data_dir):
-        random.shuffle(filelist)
-        valid_num = random.randint(valid_avg-2,valid_avg+2)
-        valid_list.append(filelist[:valid_num])
-        train_list.append(filelist[valid_num:])
-        valid_pair.append(random.sample(list(permutations(filelist[:valid_num], 2))), valid_num)
+        # print(filelist)
+        if len(filelist) > 0:
+            random.shuffle(filelist)
+            valid_num = random.randint(valid_avg-2,valid_avg+2)
+            valid_list += filelist[:valid_num]
+            train_list += filelist[valid_num:]
+            valid_pair.append(random.sample(list(permutations(filelist[:valid_num], 2)), valid_num))
+    print("train data number: {}, valid data number: {}".format(len(train_list), len(valid_list)))
     return train_list, valid_list, valid_pair
 
 def add_noisy(data, segement_length):
@@ -93,7 +96,7 @@ class SoundTrainDataset(Dataset):
 if __name__ == "__main__":
     train_list, valid_list, valid_pair = split_train_valid("./LibriSpeech-SI/train")
     train_data = SoundTrainDataset("./LibriSpeech-SI/train", train_list)
-    train_loader = DataLoader(dataset=train_data, batch_size=64, shuffle=True, num_workers=10)
+    train_loader = DataLoader(dataset=train_data, batch_size=64, shuffle=True, num_workers=3)
     valid_data = SoundValidDataset("./LibriSpeech-SI/train", valid_list)
-    valid_loader = DataLoader(dataset=valid_data, batch_size=64, shuffle=False, num_workers=10)
-    print(list(train_loader))
+    valid_loader = DataLoader(dataset=valid_data, batch_size=64, shuffle=False, num_workers=3)
+    print(list(train_loader)[0])

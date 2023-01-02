@@ -18,9 +18,9 @@ set_seed(0)
 s = ECAPAModel(lr=0.002, lr_decay=0.95, C=1024, n_class=251, m=0.2, s=30, test_step=1)
 train_list, valid_list, valid_pair = split_train_valid("./LibriSpeech-SI/train")
 train_data = SoundTrainDataset("./LibriSpeech-SI/train", train_list)
-train_loader = DataLoader(dataset=train_data, batch_size=64, shuffle=True, num_workers=10)
+train_loader = DataLoader(dataset=train_data, batch_size=64, shuffle=True)
 valid_data = SoundValidDataset("./LibriSpeech-SI/train", valid_list)
-valid_loader = DataLoader(dataset=valid_data, batch_size=64, shuffle=False, num_workers=10)
+valid_loader = DataLoader(dataset=valid_data, batch_size=64, shuffle=False)
 
 EERs = []
 minDCFs = []

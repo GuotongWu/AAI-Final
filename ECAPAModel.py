@@ -52,7 +52,7 @@ class ECAPAModel(nn.Module):
 		embeddings = {}
 		for idx, pairs in enumerate(valid_pair):
 			for pair in pairs:
-				files.append([pair[0], pair[1]])
+				files += [pair[0], pair[1]]
 		setfiles = list(set(files))
 		setfiles.sort()
 
@@ -76,9 +76,9 @@ class ECAPAModel(nn.Module):
 			data_2 = torch.FloatTensor(feats).cuda()
 			# Speaker embeddings
 			with torch.no_grad():
-				embedding_1 = self.speaker_encoder.forward(data_1, aug = False)
+				embedding_1 = self.speaker_encoder.forward(data_1)
 				embedding_1 = F.normalize(embedding_1, p=2, dim=1)
-				embedding_2 = self.speaker_encoder.forward(data_2, aug = False)
+				embedding_2 = self.speaker_encoder.forward(data_2)
 				embedding_2 = F.normalize(embedding_2, p=2, dim=1)
 			embeddings[file] = [embedding_1, embedding_2]
 		scores, labels  = [], []
